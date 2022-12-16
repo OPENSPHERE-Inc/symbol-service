@@ -36,7 +36,9 @@ describe("SecretLock", () => {
             secret,
         );
 
-        await SymbolTest.announceAll([ secretLockTx ], signerAccount, []);
+        const result = await SymbolTest.doAggregateTx([ secretLockTx ], signerAccount, []);
+
+        expect(result?.error).toBeUndefined();
     }, 600000);
 
     it("SecretProof", async () => {
@@ -49,7 +51,9 @@ describe("SecretLock", () => {
             proof,
         );
 
-        await SymbolTest.announceAll([ secretProofTx ], signerAccount, []);
+        const result = await SymbolTest.doAggregateTx([ secretProofTx ], signerAccount, []);
+
+        expect(result?.error).toBeUndefined();
 
         const balance = await symbolService.getAccountBalance(targetAccount.address, mosaicId);
 
@@ -73,7 +77,9 @@ describe("SecretLock", () => {
             secret,
         );
 
-        await SymbolTest.announceAll([ secretLockTx ], payerAccount, []);
+        let result = await SymbolTest.doAggregateTx([ secretLockTx ], payerAccount, []);
+
+        expect(result?.error).toBeUndefined();
 
         // Create duplicated secret lock by another account
         const duplicatedSecretLockTx = await symbolService.createSecretLockTx(
@@ -84,9 +90,9 @@ describe("SecretLock", () => {
             secret,
         );
 
-        await expect(async () => {
-            await SymbolTest.announceAll([ duplicatedSecretLockTx ], signerAccount, []);
-        }).rejects.toThrowError();
+        result = await SymbolTest.doAggregateTx([ duplicatedSecretLockTx ], signerAccount, []);
+
+        expect(result?.error).toBeDefined();
 
         // But this will also succeed.
         const anotherSecretLockTx = await symbolService.createSecretLockTx(
@@ -97,7 +103,9 @@ describe("SecretLock", () => {
             secret,
         );
 
-        await SymbolTest.announceAll([ anotherSecretLockTx ], signerAccount, []);
+        result = await SymbolTest.doAggregateTx([ anotherSecretLockTx ], signerAccount, []);
+
+        expect(result?.error).toBeUndefined();
     }, 600000);
 
     it("SecretProof by third person", async () => {
@@ -111,6 +119,8 @@ describe("SecretLock", () => {
             proof,
         );
 
-        await SymbolTest.announceAll([ secretProofTx ], signerAccount, []);
+        const result = await SymbolTest.doAggregateTx([ secretProofTx ], signerAccount, []);
+
+        expect(result?.error).toBeUndefined();
     }, 600000);
 });

@@ -280,17 +280,75 @@ describe("Metadata", () => {
         expect(metadata).toBeUndefined();
     }, 600000);
 
-    it("Encrypt and decrypt", async () => {
-        const { signerAccount: senderAccount } = await SymbolTest.getNamedAccounts();
+    it("Throwaway metadata", async () => {
+        const { signerAccount: sourceAccount } = await SymbolTest.getNamedAccounts();
 
-        const plain = Convert.utf8ToUint8("Test text test text 123");
-        const encrypted = SymbolService.encryptBinary(plain, senderAccount, targetAccount.publicAccount);
+        const addTx = await symbolService.createMetadataTx(
+            MetadataType.Account,
+            sourceAccount.publicAccount,
+            targetAccount.publicAccount,
+            undefined,
+            metadataKey,
+            metadataValue,
+        );
+        const removeTx = await symbolService.createMetadataTx(
+            MetadataType.Account,
+            sourceAccount.publicAccount,
+            targetAccount.publicAccount,
+            undefined,
+            metadataKey,
+            metadataValue,
+            -metadataValue.length
+        );
+        const result = await SymbolTest.doAggregateTx([ addTx, removeTx ], sourceAccount, [ targetAccount ]);
 
-        expect(encrypted.buffer).not.toStrictEqual(plain.buffer);
+        expect(result?.error).toBeUndefined();
 
-        const decrypted = SymbolService.decryptBinary(encrypted, senderAccount.publicAccount, targetAccount);
+        metadata = (await symbolService.searchMetadata(
+            MetadataType.Namespace,
+            { source: sourceAccount, target: targetAccount, key: metadataKey }
+        )).shift();
 
-        expect(decrypted.buffer).not.toStrictEqual(encrypted.buffer);
-        expect(decrypted.buffer).toStrictEqual(plain.buffer);
+        expect(metadata).toBeUndefined();
     }, 600000);
+
+    it("Failed with throwaway metadata", async () => {
+        const { signerAccount: sourceAccount } = await SymbolTest.getNamedAccounts();
+
+        // Blocking metadata
+        const blockTx = await symbolService.createMetadataTx(
+            MetadataType.Account,
+            sourceAccount.publicAccount,
+            targetAccount.publicAccount,
+            undefined,
+            metadataKey,
+            metadataValue,
+        );
+        let result = await SymbolTest.doAggregateTx([ blockTx ], sourceAccount, [ targetAccount ]);
+
+        expect(result?.error).toBeUndefined();
+
+        // This will be failed.
+        const addTx = await symbolService.createMetadataTx(
+            MetadataType.Account,
+            sourceAccount.publicAccount,
+            targetAccount.publicAccount,
+            undefined,
+            metadataKey,
+            metadataValue,
+        );
+        const removeTx = await symbolService.createMetadataTx(
+            MetadataType.Account,
+            sourceAccount.publicAccount,
+            targetAccount.publicAccount,
+            undefined,
+            metadataKey,
+            metadataValue,
+            -metadataValue.length
+        );
+        result = await SymbolTest.doAggregateTx([ addTx, removeTx ], sourceAccount, [ targetAccount ]);
+
+        expect(result?.error).toBeDefined();
+    }, 600000);
+
 });
