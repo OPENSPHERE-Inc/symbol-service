@@ -11,9 +11,11 @@ import {
     IListener,
     InnerTransaction,
     KeyGenerator,
+    LockHashAlgorithm,
     Metadata,
     MetadataSearchCriteria,
     MetadataType,
+    Mosaic,
     MosaicDefinitionTransaction,
     MosaicFlags,
     MosaicId,
@@ -26,9 +28,14 @@ import {
     NamespaceRegistrationTransaction,
     NetworkConfiguration,
     NetworkType,
-    PublicAccount, RepositoryFactory, RepositoryFactoryConfig,
+    PublicAccount,
+    RepositoryFactory,
+    RepositoryFactoryConfig,
     RepositoryFactoryHttp,
-    SignedTransaction, Transaction,
+    SecretLockTransaction,
+    SecretProofTransaction,
+    SignedTransaction,
+    Transaction,
     TransactionFees,
     TransactionGroup,
     UInt64
@@ -656,4 +663,54 @@ export class SymbolService {
         return firstValueFrom(metadataHttp.getMetadata(compositeHash));
     }
 
+    public async createSecretLockTx(
+        senderPubAccount: PublicAccount,
+        recipientAddress: Address,
+        mosaic: Mosaic,
+        durationBlocks: UInt64,
+        secret: Uint8Array,
+    ) {
+        const { networkType, epochAdjustment } = await this.getNetwork();
+        return SecretLockTransaction.create(
+            Deadline.create(epochAdjustment, this.config.deadline_hours),
+            mosaic,
+            durationBlocks,
+            LockHashAlgorithm.Op_Sha3_256,
+            Convert.uint8ToHex(secret),
+            recipientAddress,
+            networkType,
+        ).toAggregate(senderPubAccount);
+    }
+
+    public async createSecretProofTx(
+        senderPubAccount: PublicAccount,
+        recipientAddress: Address,
+        secret: Uint8Array,
+        proof: Uint8Array,
+    ) {
+        const { networkType, epochAdjustment } = await this.getNetwork();
+        return SecretProofTransaction.create(
+            Deadline.create(epochAdjustment, this.config.deadline_hours),
+            LockHashAlgorithm.Op_Sha3_256,
+            Convert.uint8ToHex(secret),
+            recipientAddress,
+            Convert.uint8ToHex(proof),
+            networkType
+        ).toAggregate(senderPubAccount);
+    }
+
+    public async getAccountBalance(
+        accountAddress: Address,
+        mosaicId: MosaicId,
+    ) {
+        const { repositoryFactory } = await this.getNetwork();
+        const accountHttp = repositoryFactory.createAccountRepository();
+
+        return firstValueFrom(accountHttp.getAccountInfo(accountAddress))
+            .then((accountInfo) =>
+                accountInfo.mosaics
+                    .filter((mosaic) => mosaic.id.equals(mosaicId))
+                    .reduce((acc, curr) => acc.add(curr.amount), UInt64.fromUint(0))
+            );
+    }
 }

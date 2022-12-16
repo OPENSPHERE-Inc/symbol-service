@@ -3,11 +3,11 @@ dotenv.config({ path: './.env.test' });
 
 import {initTestEnv, symbolService, SymbolTest} from "./utils";
 import {SymbolService} from "../services";
-import {Account, Convert, KeyGenerator, Metadata, MetadataType, MosaicId, NamespaceId, UInt64,} from "symbol-sdk";
+import {Account, Convert, KeyGenerator, Metadata, MetadataType, MosaicId, NamespaceId, UInt64} from "symbol-sdk";
 import {v4 as uuidv4} from "uuid";
 
 
-describe("SymbolService", () => {
+describe("Metadata", () => {
     let targetAccount: Account;
     const metadataKey = "test1key";
     const metadataValue = "test1value";

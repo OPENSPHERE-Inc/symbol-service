@@ -123,7 +123,7 @@ export namespace SymbolTest {
             signerAccount.publicAccount,
             UInt64.fromUint(20),
             0,
-            1,
+            100,
         );
         await SymbolTest.doAggregateTx(mosaicDefinition.txs, signerAccount, [])
             .then((result) => {
