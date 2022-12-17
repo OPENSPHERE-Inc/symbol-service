@@ -1,5 +1,7 @@
 # Symbol Service library
 
+OPENSPHERE Inc. OSS プロジェクト内部利用 Symbol ライブラリ
+
 ## ビルド
 
 ```shell
