@@ -46,6 +46,7 @@ import moment from "moment";
 import {sha3_256} from "js-sha3";
 import {Logger} from "../libs";
 import Long from "long";
+import _ from "lodash";
 
 
 export interface SignedAggregateTx {
@@ -74,7 +75,7 @@ export class SymbolService {
 
     // Get numerical string
     public static toXYM(microXYM: string | Long | UInt64) {
-        const value = microXYM instanceof Long
+        const value = Long.isLong(microXYM)
             ? microXYM
             : Long.fromString(microXYM.toString());
         const decimal = `000000${value.mod(1000000).toString()}`
@@ -168,6 +169,13 @@ export class SymbolService {
         hasher.update(Convert.numberToUint8Array(type, 1));
         return hasher.hex().toUpperCase();
     }
+
+    public static compareKeys = (obj1: { toDTO: () => any }, obj2: { toDTO: () => any }) =>
+        _.isEqual(Object.keys(obj1.toDTO()), Object.keys(obj2.toDTO()));
+    public static isAddress = (value?: any): value is Address =>
+        !!value && typeof(value.toDTO) === "function" && SymbolService.compareKeys(value, new Address());
+    public static isUInt64 = (value?: any): value is UInt64 =>
+        !!value && typeof(value.toDTO) === "function" && SymbolService.compareKeys(value, new UInt64([0, 0]));
 
     config: SymbolServiceConfig = {
         node_url: "",
@@ -549,10 +557,10 @@ export class SymbolService {
 
         const searchCriteria: MetadataSearchCriteria = {
             targetAddress: criteria.target && (
-                criteria.target instanceof Address ? criteria.target : criteria.target.address
+                SymbolService.isAddress(criteria.target) ? criteria.target : criteria.target.address
             ),
             sourceAddress: criteria.source && (
-                criteria.source instanceof Address ? criteria.source : criteria.source.address
+                SymbolService.isAddress(criteria.source) ? criteria.source : criteria.source.address
             ),
             scopedMetadataKey: typeof (criteria.key) === "string"
                 ? SymbolService.generateKey(criteria.key).toHex()
@@ -724,8 +732,8 @@ export class SymbolService {
         return TransferTransaction.create(
             Deadline.create(epochAdjustment, this.config.deadline_hours),
             recipientAddress,
-            assets instanceof UInt64
-                ? [ new Mosaic(networkCurrencyMosaicId, assets) ]
+            SymbolService.isUInt64(assets)
+                ? [ new Mosaic(networkCurrencyMosaicId, assets ) ]
                 : Array.isArray(assets) ? assets : [ assets ],
             typeof (message) === "string" ? PlainMessage.create(message) : message,
             networkType,
