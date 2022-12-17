@@ -1,16 +1,17 @@
 import dotenv from "dotenv";
 dotenv.config({ path: './.env.test' });
 
-import {initTestEnv, symbolService, SymbolTest} from "./utils";
+import {SymbolTest} from "./utils";
 import {SymbolService} from "../services";
 import {Account, Convert} from "symbol-sdk";
 
 
 describe("Encryption", () => {
     let targetAccount: Account;
+    let symbolService: SymbolService;
 
     beforeAll(async () => {
-        initTestEnv();
+        symbolService = SymbolTest.init();
 
         const { networkType } = await symbolService.getNetwork();
         targetAccount = Account.generateNewAccount(networkType);

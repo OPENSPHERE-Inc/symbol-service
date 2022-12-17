@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config({ path: './.env.test' });
 
-import {initTestEnv, symbolService, SymbolTest} from "./utils";
+import {SymbolTest} from "./utils";
 import {SymbolService} from "../services";
 import {Account, Convert, KeyGenerator, Metadata, MetadataType, MosaicId, NamespaceId, UInt64} from "symbol-sdk";
 import {v4 as uuidv4} from "uuid";
@@ -14,9 +14,10 @@ describe("Metadata", () => {
     let mosaicId: MosaicId;
     let namespaceId: NamespaceId;
     let metadata: Metadata | undefined;
+    let symbolService: SymbolService;
 
     beforeAll(async () => {
-        initTestEnv();
+        symbolService = SymbolTest.init();
 
         const { networkType } = await symbolService.getNetwork();
         targetAccount = Account.generateNewAccount(networkType);

@@ -1,10 +1,11 @@
 import dotenv from "dotenv";
 dotenv.config({ path: './.env.test' });
 
-import {initTestEnv, symbolService, SymbolTest} from "./utils";
+import {SymbolTest} from "./utils";
 import {Account, Convert, Mosaic, MosaicId, UInt64} from "symbol-sdk";
 import {sha3_256} from "js-sha3";
 import crypto from "crypto";
+import {SymbolService} from "../services";
 
 
 describe("SecretLock", () => {
@@ -12,9 +13,10 @@ describe("SecretLock", () => {
     let mosaicId: MosaicId;
     let proof: Uint8Array;
     let secret: Uint8Array;
+    let symbolService: SymbolService;
 
     beforeAll(async () => {
-        initTestEnv();
+        symbolService = SymbolTest.init();
 
         const assets = await SymbolTest.generateAssets();
         targetAccount = assets.account;

@@ -11,30 +11,29 @@ import {v4 as uuidv4} from "uuid";
 import {Logger} from "../libs";
 
 
-export let symbolService: SymbolService;
-
-export const initTestEnv = () => {
-    assert(process.env.NODE_URL);
-    assert(process.env.FEE_RATIO);
-    assert(process.env.BATCH_SIZE);
-    assert(process.env.MAX_PARALLELS);
-
-    Logger.init({ log_level: Logger.LogLevel.DEBUG });
-
-    const config = {
-        node_url: process.env.NODE_URL,
-        fee_ratio: Number(process.env.FEE_RATIO),
-        deadline_hours: 5,
-        batch_size: Number(process.env.BATCH_SIZE),
-        max_parallels: Number(process.env.MAX_PARALLELS),
-    };
-    symbolService = new SymbolService(config);
-
-    return symbolService;
-};
-
-
 export namespace SymbolTest {
+
+    export let symbolService: SymbolService;
+
+    export const init = () => {
+        assert(process.env.NODE_URL);
+        assert(process.env.FEE_RATIO);
+        assert(process.env.BATCH_SIZE);
+        assert(process.env.MAX_PARALLELS);
+
+        Logger.init({ log_level: Logger.LogLevel.DEBUG });
+
+        const config = {
+            node_url: process.env.NODE_URL,
+            fee_ratio: Number(process.env.FEE_RATIO),
+            deadline_hours: 5,
+            batch_size: Number(process.env.BATCH_SIZE),
+            max_parallels: Number(process.env.MAX_PARALLELS),
+        };
+        symbolService = new SymbolService(config);
+
+        return symbolService;
+    };
 
     export const getNamedAccounts = async () => {
         assert(process.env.SIGNER1_PRIVATE_KEY);
