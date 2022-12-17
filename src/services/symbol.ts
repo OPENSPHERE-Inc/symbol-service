@@ -11,7 +11,7 @@ import {
     IListener,
     InnerTransaction,
     KeyGenerator,
-    LockHashAlgorithm,
+    LockHashAlgorithm, Message,
     Metadata,
     MetadataSearchCriteria,
     MetadataType,
@@ -27,7 +27,7 @@ import {
     NamespaceMetadataTransaction,
     NamespaceRegistrationTransaction,
     NetworkConfiguration,
-    NetworkType,
+    NetworkType, PlainMessage,
     PublicAccount,
     RepositoryFactory,
     RepositoryFactoryConfig,
@@ -37,7 +37,7 @@ import {
     SignedTransaction,
     Transaction,
     TransactionFees,
-    TransactionGroup,
+    TransactionGroup, TransferTransaction,
     UInt64
 } from "symbol-sdk";
 import assert from "assert";
@@ -179,7 +179,7 @@ export class SymbolService {
 
     // You MUST call once this function and setup Node URL before access the node.
     public constructor(cfg: Partial<SymbolServiceConfig>) {
-        this.config = { ...this.config, ...cfg };
+        this.config = {...this.config, ...cfg};
         this.network = null;
     }
 
@@ -224,19 +224,19 @@ export class SymbolService {
     }
 
     public async getFeeMultiplier(ratio: number = this.config.fee_ratio) {
-        const { transactionFees } = await this.getNetwork();
+        const {transactionFees} = await this.getNetwork();
         return transactionFees.minFeeMultiplier + transactionFees.averageFeeMultiplier * ratio;
     }
 
     private async announceTx(tx: SignedTransaction) {
         Logger.debug(`Announcing TX: ${tx.hash}`);
-        const { repositoryFactory } = await this.getNetwork();
+        const {repositoryFactory} = await this.getNetwork();
         return firstValueFrom(repositoryFactory.createTransactionRepository()
             .announce(tx));
     }
 
     public async signTx(signerAccount: Account, tx: Transaction) {
-        const { networkGenerationHash } = await this.getNetwork();
+        const {networkGenerationHash} = await this.getNetwork();
 
         const generationHashBytes = Array.from(Convert.hexToUint8(networkGenerationHash));
         const serializedBytes = Array.from(Convert.hexToUint8(tx.serialize()));
@@ -253,13 +253,13 @@ export class SymbolService {
         const hash = Transaction.createTransactionHash(payload, generationHashBytes);
         const signedTx = new SignedTransaction(payload, hash, signerAccount.publicKey, tx.type, tx.networkType);
 
-        return { signature, hash, payload, signedTx };
+        return {signature, hash, payload, signedTx};
     }
 
     public async convertToSignedTx(txWithSignature: Transaction) {
         assert(txWithSignature.signer);
 
-        const { networkGenerationHash } = await this.getNetwork();
+        const {networkGenerationHash} = await this.getNetwork();
         const generationHashBytes = Array.from(Convert.hexToUint8(networkGenerationHash));
 
         const payload = txWithSignature.serialize();
@@ -300,7 +300,7 @@ export class SymbolService {
         isRestrictable: boolean = true,
         isRevokable: boolean = false,
     ) {
-        const { epochAdjustment, networkType } = await this.getNetwork();
+        const {epochAdjustment, networkType} = await this.getNetwork();
 
         const nonce = MosaicNonce.createRandom();
         const mosaicId = MosaicId.createFromNonce(nonce, creatorPubAccount.address);
@@ -342,7 +342,7 @@ export class SymbolService {
         name: string,
         durationBlocks: UInt64,
     ) {
-        const { epochAdjustment, networkType } = await this.getNetwork();
+        const {epochAdjustment, networkType} = await this.getNetwork();
         return NamespaceRegistrationTransaction.createRootNamespace(
             Deadline.create(epochAdjustment, this.config.deadline_hours),
             name,
@@ -362,9 +362,9 @@ export class SymbolService {
         value: string | Uint8Array,
         sizeDelta?: number,
     ) {
-        const { epochAdjustment, networkType } = await this.getNetwork();
-        const valueBytes = typeof(value) === "string" ? Convert.utf8ToUint8(value) : value;
-        const actualKey = typeof(key) === "string" ? SymbolService.generateKey(key) : key;
+        const {epochAdjustment, networkType} = await this.getNetwork();
+        const valueBytes = typeof (value) === "string" ? Convert.utf8ToUint8(value) : value;
+        const actualKey = typeof (key) === "string" ? SymbolService.generateKey(key) : key;
         const actualSizeDelta = sizeDelta === undefined ? valueBytes.length : sizeDelta;
 
         switch (type) {
@@ -372,8 +372,8 @@ export class SymbolService {
                 return MosaicMetadataTransaction.create(
                     Deadline.create(epochAdjustment, this.config.deadline_hours),
                     targetPubAccount.address,
-                    typeof(key) === "string" ? SymbolService.generateKey(key) : key,
-                    typeof(targetId) === "string" ? new MosaicId(targetId) : targetId as MosaicId,
+                    typeof (key) === "string" ? SymbolService.generateKey(key) : key,
+                    typeof (targetId) === "string" ? new MosaicId(targetId) : targetId as MosaicId,
                     actualSizeDelta,
                     valueBytes,
                     networkType,
@@ -385,7 +385,7 @@ export class SymbolService {
                     Deadline.create(epochAdjustment, this.config.deadline_hours),
                     targetPubAccount.address,
                     actualKey,
-                    typeof(targetId) === "string" ? new NamespaceId(targetId) : targetId as NamespaceId,
+                    typeof (targetId) === "string" ? new NamespaceId(targetId) : targetId as NamespaceId,
                     actualSizeDelta,
                     valueBytes,
                     networkType,
@@ -410,7 +410,7 @@ export class SymbolService {
         numCosigner: number,
         txs: InnerTransaction[],
     ) {
-        const { epochAdjustment, networkType } = await this.getNetwork();
+        const {epochAdjustment, networkType} = await this.getNetwork();
         return AggregateTransaction.createComplete(
             Deadline.create(epochAdjustment, this.config.deadline_hours),
             txs,
@@ -422,7 +422,7 @@ export class SymbolService {
 
     // Returns undefined if tx not found.
     public async getConfirmedTx(txHash: string) {
-        const { repositoryFactory } = await this.getNetwork();
+        const {repositoryFactory} = await this.getNetwork();
         const txHttp = repositoryFactory.createTransactionRepository();
 
         return firstValueFrom(txHttp.getTransaction(txHash, TransactionGroup.Confirmed))
@@ -432,7 +432,7 @@ export class SymbolService {
 
     // Returns undefined if tx not found.
     public async getPartialTx(txHash: string) {
-        const { repositoryFactory } = await this.getNetwork();
+        const {repositoryFactory} = await this.getNetwork();
         const txHttp = repositoryFactory.createTransactionRepository();
 
         return firstValueFrom(txHttp.getTransaction(txHash, TransactionGroup.Partial))
@@ -446,7 +446,7 @@ export class SymbolService {
         txHashes: string[],
         group: "confirmed" | "partial" | "all" = "confirmed",
     ) {
-        const { repositoryFactory } = await this.getNetwork();
+        const {repositoryFactory} = await this.getNetwork();
         const statusHttp = repositoryFactory.createTransactionStatusRepository();
         const subscriptions = new Array<Subscription>();
 
@@ -458,7 +458,7 @@ export class SymbolService {
                             next: async (value) => {
                                 const error = `Received error status: ${value.code}`;
                                 Logger.debug(error);
-                                resolve({ txHash, error });
+                                resolve({txHash, error});
                             },
                             error: (e) => {
                                 reject(e);
@@ -470,7 +470,7 @@ export class SymbolService {
                         listener.confirmed(account.address, txHash)
                             .subscribe({
                                 next: async () => {
-                                    resolve({ txHash, error: undefined });
+                                    resolve({txHash, error: undefined});
                                 },
                                 error: (e) => {
                                     reject(e);
@@ -483,7 +483,7 @@ export class SymbolService {
                         listener.aggregateBondedAdded(account.address, txHash, true)
                             .subscribe({
                                 next: async () => {
-                                    resolve({ txHash, error: undefined });
+                                    resolve({txHash, error: undefined});
                                 },
                                 error: (e) => {
                                     reject(e);
@@ -498,12 +498,12 @@ export class SymbolService {
                     // Transaction Failed
                     const error = `Received error status: ${status.code}`;
                     Logger.debug(error);
-                    resolve({ txHash, error: error });
+                    resolve({txHash, error: error});
                 } else if ((["confirmed", "all"].includes(group) && await this.getConfirmedTx(txHash)) ||
                     (["partial", "all"].includes(group) && await this.getPartialTx(txHash))
                 ) {
                     // Already confirmed
-                    resolve({ txHash, error: undefined });
+                    resolve({txHash, error: undefined});
                 }
             })
         );
@@ -522,12 +522,12 @@ export class SymbolService {
         txHashes?: string | string[],
         group: "confirmed" | "partial" | "all" = "confirmed",
     ) {
-        const { repositoryFactory } = await this.getNetwork();
+        const {repositoryFactory} = await this.getNetwork();
         const listener = repositoryFactory.createListener();
         await listener.open();
 
         // Wait for all txs in parallel
-        return this.listenTxs(listener, account, (typeof(txHashes) === "string" ? [txHashes] : (txHashes || [])), group)
+        return this.listenTxs(listener, account, (typeof (txHashes) === "string" ? [txHashes] : (txHashes || [])), group)
             .finally(() => {
                 listener.close();
             });
@@ -544,7 +544,7 @@ export class SymbolService {
         },
         pageSize: number = 100,
     ) {
-        const { repositoryFactory } = await this.getNetwork();
+        const {repositoryFactory} = await this.getNetwork();
         const metadataHttp = repositoryFactory.createMetadataRepository();
 
         const searchCriteria: MetadataSearchCriteria = {
@@ -554,7 +554,7 @@ export class SymbolService {
             sourceAddress: criteria.source && (
                 criteria.source instanceof Address ? criteria.source : criteria.source.address
             ),
-            scopedMetadataKey: typeof(criteria.key) === "string"
+            scopedMetadataKey: typeof (criteria.key) === "string"
                 ? SymbolService.generateKey(criteria.key).toHex()
                 : criteria.key?.toHex(),
             targetId: criteria.targetId && criteria.targetId,
@@ -567,7 +567,7 @@ export class SymbolService {
         const metadataPool = new Array<Metadata>();
         do {
             batch = await firstValueFrom(
-                metadataHttp.search({ ...searchCriteria, pageNumber: pageNumber++ })
+                metadataHttp.search({...searchCriteria, pageNumber: pageNumber++})
             ).then((page) => page.data);
             metadataPool.push(...batch);
         } while (batch.length === pageSize);
@@ -583,9 +583,9 @@ export class SymbolService {
         feeRatio: number = this.config.fee_ratio,
         batchSize: number = this.config.batch_size,
     ) {
-        const { networkGenerationHash } = await this.getNetwork();
+        const {networkGenerationHash} = await this.getNetwork();
         const feeMultiplier = await this.getFeeMultiplier(feeRatio);
-        const txPool = [ ...txs ];
+        const txPool = [...txs];
         const batches = new Array<SignedAggregateTx>();
 
         do {
@@ -620,10 +620,10 @@ export class SymbolService {
         signerAccount: Account | PublicAccount,
         maxParallel: number = this.config.max_parallels,
     ) {
-        const txPool = [ ...batches ];
-        const workers = new Array<Promise<{txHash: string, error?: string}[] | undefined>>();
+        const txPool = [...batches];
+        const workers = new Array<Promise<{ txHash: string, error?: string }[] | undefined>>();
 
-        const { repositoryFactory } = await this.getNetwork();
+        const {repositoryFactory} = await this.getNetwork();
         const listener = repositoryFactory.createListener();
         await listener.open();
 
@@ -646,7 +646,7 @@ export class SymbolService {
             .then((workerErrors) => workerErrors
                 .filter((error) => error)
                 .reduce(
-                    (acc, curr) => [ ...(acc || []), ...(curr || []) ],
+                    (acc, curr) => [...(acc || []), ...(curr || [])],
                     undefined,
                 )
             )
@@ -670,7 +670,7 @@ export class SymbolService {
         durationBlocks: UInt64,
         secret: Uint8Array,
     ) {
-        const { networkType, epochAdjustment } = await this.getNetwork();
+        const {networkType, epochAdjustment} = await this.getNetwork();
         return SecretLockTransaction.create(
             Deadline.create(epochAdjustment, this.config.deadline_hours),
             mosaic,
@@ -688,7 +688,7 @@ export class SymbolService {
         secret: Uint8Array,
         proof: Uint8Array,
     ) {
-        const { networkType, epochAdjustment } = await this.getNetwork();
+        const {networkType, epochAdjustment} = await this.getNetwork();
         return SecretProofTransaction.create(
             Deadline.create(epochAdjustment, this.config.deadline_hours),
             LockHashAlgorithm.Op_Sha3_256,
@@ -703,7 +703,7 @@ export class SymbolService {
         accountAddress: Address,
         mosaicId: MosaicId,
     ) {
-        const { repositoryFactory } = await this.getNetwork();
+        const {repositoryFactory} = await this.getNetwork();
         const accountHttp = repositoryFactory.createAccountRepository();
 
         return firstValueFrom(accountHttp.getAccountInfo(accountAddress))
@@ -713,4 +713,23 @@ export class SymbolService {
                     .reduce((acc, curr) => acc.add(curr.amount), UInt64.fromUint(0))
             );
     }
+
+    public async createTransferTx(
+        senderPubAccount: PublicAccount,
+        recipientAddress: Address,
+        assets: Mosaic | Mosaic[] | UInt64,
+        message: string | Message,
+    ) {
+        const {networkType, epochAdjustment, networkCurrencyMosaicId} = await this.getNetwork();
+        return TransferTransaction.create(
+            Deadline.create(epochAdjustment, this.config.deadline_hours),
+            recipientAddress,
+            assets instanceof UInt64
+                ? [ new Mosaic(networkCurrencyMosaicId, assets) ]
+                : Array.isArray(assets) ? assets : [ assets ],
+            typeof (message) === "string" ? PlainMessage.create(message) : message,
+            networkType,
+        ).toAggregate(senderPubAccount);
+    }
+
 }
