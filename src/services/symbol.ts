@@ -177,7 +177,7 @@ export class SymbolService {
     public static isUInt64 = (value?: any): value is UInt64 =>
         !!value && typeof(value.toDTO) === "function" && SymbolService.compareKeys(value, new UInt64([0, 0]));
 
-    config: SymbolServiceConfig = {
+    public readonly config: SymbolServiceConfig = {
         node_url: "",
         fee_ratio: 0.0,
         deadline_hours: 2,
