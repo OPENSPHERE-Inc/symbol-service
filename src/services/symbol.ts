@@ -415,7 +415,7 @@ export class SymbolService {
 
     public async composeAggregateCompleteTx(
         feeMultiplier: number,
-        numCosigner: number,
+        requiredCosignatures: number,
         txs: InnerTransaction[],
     ) {
         const {epochAdjustment, networkType} = await this.getNetwork();
@@ -425,7 +425,7 @@ export class SymbolService {
             networkType,
             [])
             // Use network transaction fee
-            .setMaxFeeForAggregate(feeMultiplier, numCosigner);
+            .setMaxFeeForAggregate(feeMultiplier, requiredCosignatures);
     }
 
     // Returns undefined if tx not found.
@@ -583,6 +583,30 @@ export class SymbolService {
         return metadataPool;
     }
 
+    public async buildAggregateCompleteTxBatches(
+        txs: InnerTransaction[],
+        feeRatio: number = this.config.fee_ratio,
+        batchSize: number = this.config.batch_size,
+        requiredCosignatures: number = 0,
+    ) {
+        const feeMultiplier = await this.getFeeMultiplier(feeRatio);
+        const txPool = [...txs];
+        const batches = new Array<AggregateTransaction>();
+
+        do {
+            const innerTxs = txPool.splice(0, batchSize);
+            const aggregateTx = await this.composeAggregateCompleteTx(
+                feeMultiplier,
+                requiredCosignatures || 0,
+                innerTxs,
+            );
+
+            batches.push(aggregateTx);
+        } while (txPool.length);
+
+        return batches;
+    }
+
     // Return: Array of signed aggregate complete TX and cosignatures (when cosigners are specified)
     public async buildSignedAggregateCompleteTxBatches(
         txs: InnerTransaction[],
@@ -590,33 +614,23 @@ export class SymbolService {
         cosignerAccounts?: Account[],
         feeRatio: number = this.config.fee_ratio,
         batchSize: number = this.config.batch_size,
+        requiredCosignatures: number = cosignerAccounts?.length || 0,
     ) {
         const {networkGenerationHash} = await this.getNetwork();
-        const feeMultiplier = await this.getFeeMultiplier(feeRatio);
-        const txPool = [...txs];
-        const batches = new Array<SignedAggregateTx>();
+        const batches = await this.buildAggregateCompleteTxBatches(txs, feeRatio, batchSize, requiredCosignatures);
 
-        do {
-            const innerTxs = txPool.splice(0, batchSize);
-            const aggregateTx = await this.composeAggregateCompleteTx(
-                feeMultiplier,
-                cosignerAccounts?.length || 0,
-                innerTxs,
-            );
-
-            const signedTx = signerAccount.sign(aggregateTx, networkGenerationHash);
+        return batches.map((batch) => {
+            const signedTx = signerAccount.sign(batch, networkGenerationHash);
             const cosignatures = cosignerAccounts?.map(
                 (cosigner) => CosignatureTransaction.signTransactionHash(cosigner, signedTx.hash)
             ) || [];
 
-            batches.push({
+            return {
                 signedTx,
                 cosignatures,
-                maxFee: aggregateTx.maxFee,
-            });
-        } while (txPool.length);
-
-        return batches;
+                maxFee: batch.maxFee,
+            };
+        });
     }
 
     // Announce aggregate TXs in parallel
