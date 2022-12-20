@@ -1,6 +1,6 @@
 {
   "name": "symbol-service",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Symbol Service Library",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",

@@ -97,30 +97,6 @@ export class SymbolService {
 
     public static generateKey = (key: string) => KeyGenerator.generateUInt64Key(key);
 
-    public static createSignedTxWithCosignatures(
-        signedTx: SignedTransaction,
-        cosignatureSignedTxs: CosignatureSignedTransaction[]
-    ) {
-        let payload = signedTx.payload;
-
-        cosignatureSignedTxs.forEach((cosignedTransaction) => {
-            payload += cosignedTransaction.version.toHex() + cosignedTransaction.signerPublicKey + cosignedTransaction.signature;
-        });
-
-        // Calculate new size
-        const size = `00000000${(payload.length / 2).toString(16)}`;
-        const formatedSize = size.substring(size.length - 8);
-        const littleEndianSize =
-            formatedSize.substring(6, 8) +
-            formatedSize.substring(4, 6) +
-            formatedSize.substring(2, 4) +
-            formatedSize.substring(0, 2);
-
-        payload = littleEndianSize + payload.substring(8);
-
-        return new SignedTransaction(payload, signedTx.hash, signedTx.signerPublicKey, signedTx.type, signedTx.networkType);
-    }
-
     public static createNamespaceId(value: string) {
         if (value.match(/^[0-9A-F]{16}$/)) {
             return new NamespaceId(UInt64.fromHex(value).toDTO());
@@ -282,12 +258,36 @@ export class SymbolService {
         );
     }
 
+    public createSignedTxWithCosignatures(
+        signedTx: SignedTransaction,
+        cosignatureSignedTxs: CosignatureSignedTransaction[]
+    ) {
+        let payload = signedTx.payload;
+
+        cosignatureSignedTxs.forEach((cosignedTransaction) => {
+            payload += cosignedTransaction.version.toHex() + cosignedTransaction.signerPublicKey + cosignedTransaction.signature;
+        });
+
+        // Calculate new size
+        const size = `00000000${(payload.length / 2).toString(16)}`;
+        const formatedSize = size.substring(size.length - 8);
+        const littleEndianSize =
+            formatedSize.substring(6, 8) +
+            formatedSize.substring(4, 6) +
+            formatedSize.substring(2, 4) +
+            formatedSize.substring(0, 2);
+
+        payload = littleEndianSize + payload.substring(8);
+
+        return new SignedTransaction(payload, signedTx.hash, signedTx.signerPublicKey, signedTx.type, signedTx.networkType);
+    }
+
     public async announceTxWithCosignatures(
         signedTx: SignedTransaction,
         cosignatures: CosignatureSignedTransaction[],
     ) {
         // DO NOT modify the transaction!
-        const completeSignedTx = SymbolService.createSignedTxWithCosignatures(
+        const completeSignedTx = this.createSignedTxWithCosignatures(
             signedTx,
             cosignatures
         );
