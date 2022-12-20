@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config({ path: './.env.test' });
 
-import {Account, Address, UInt64} from "symbol-sdk";
+import {Account, Address, AggregateTransaction, Convert, UInt64} from "symbol-sdk";
 import {SymbolService} from "../services";
 import {SymbolTest} from "./utils";
 
@@ -43,5 +43,35 @@ describe("Common", () => {
 
         expect(SymbolService.isUInt64(new ExUInt64())).toBeTruthy();
     });
+
+    it("signTx, convertSingedTx", async () => {
+       const { signerAccount: senderAccount, payerAccount: recipientAccount } = await SymbolTest.getNamedAccounts();
+
+       const transferTx = await symbolService.createTransferTx(
+           senderAccount.publicAccount,
+           recipientAccount.address,
+           UInt64.fromUint(1000000),
+           "test1message"
+       );
+
+       const aggregateTx = await symbolService.composeAggregateCompleteTx(
+           await symbolService.getFeeMultiplier(),
+           0,
+           [ transferTx ],
+       );
+
+       const { signature, hash, payload, signedTx } = await symbolService.signTx(senderAccount, aggregateTx);
+
+        expect(payload).toBe(signedTx.payload);
+        expect(hash).toBe(signedTx.hash);
+
+        const aggregateTxWithSignature = AggregateTransaction.createFromPayload(payload);
+
+        expect(aggregateTxWithSignature.signature).toBe(Convert.uint8ToHex(signature));
+
+        const convertedSignedTx = await symbolService.convertToSignedTx(aggregateTxWithSignature);
+
+        expect(convertedSignedTx).toStrictEqual(signedTx);
+    }, 600000);
 
 });

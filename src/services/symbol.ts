@@ -419,13 +419,17 @@ export class SymbolService {
         txs: InnerTransaction[],
     ) {
         const {epochAdjustment, networkType} = await this.getNetwork();
-        return AggregateTransaction.createComplete(
-            Deadline.create(epochAdjustment, this.config.deadline_hours),
-            txs,
-            networkType,
-            [])
-            // Use network transaction fee
-            .setMaxFeeForAggregate(feeMultiplier, requiredCosignatures);
+        return AggregateTransaction.createFromPayload(
+            AggregateTransaction.createComplete(
+                Deadline.create(epochAdjustment, this.config.deadline_hours),
+                txs,
+                networkType,
+                [])
+                // Use network transaction fee
+                .setMaxFeeForAggregate(feeMultiplier, requiredCosignatures)
+                // Clear inner transaction's deadline (because it's garbage)
+                .serialize()
+        );
     }
 
     // Returns undefined if tx not found.
