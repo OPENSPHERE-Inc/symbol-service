@@ -1,12 +1,12 @@
 {
-  "name": "symbol-service",
-  "version": "1.0.8",
+  "name": "@opensphere-inc/symbol-service",
+  "version": "1.0.9",
   "description": "Symbol Service Library",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "author": "Shinichi Hanayama <hanatyan@opensphere.co.jp>",
   "license": "MIT",
-  "private": true,
+  "private": false,
   "engines": {
     "node": ">=12.22.1"
   },
