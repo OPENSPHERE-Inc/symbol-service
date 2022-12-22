@@ -33,7 +33,29 @@ const symbolService = new SymbolService(config)
     - `repo_factory_config: RepositoryFactoryConfig` - **(Optional)** Symbol SDK の RepositoryFactoryHttp コンストラクタに渡すコンフィグ
     - `repo_factory: RepositoryFactoryHttp` - **(Optional)** RepositoryFactoryHttp インスタンスそのもの
 
-## 2. Logger ネームスペース
+## 2. NecromancyService クラス
+
+[Aggregate Undead Transaction](https://github.com/OPENSPHERE-Inc/aggregate-undead-poc) を取り扱うクラス
+
+### コンストラクタ
+
+```typescript
+const config: NecromancyServiceConfig = {
+  deadlineUnitHours: 5,
+  deadlineMarginHours: 1,    
+};
+
+const necromancyService = new NecromancyService(symbolService, config);
+```
+
+**引数**
+
+- `symbolService: SymbolService` - SymbolService インスタンス
+- `config: NecromancyServiceConfig`
+  - `deadlineUnitHours: number` - Deadline を時分割する際の単位あたりの時間
+  - `deadlineMarginHours: number` - Pick する際に持たせる余裕時間（deadlineUnitHours + deadlineMarginHours がネットワークの制限を超えない事）
+
+## 3. Logger ネームスペース
 
 ### 初期化
 
