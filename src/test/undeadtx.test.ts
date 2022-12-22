@@ -4,8 +4,8 @@ dotenv.config({ path: './.env.test' });
 import {AggregateUndeadTransaction, NecromancyService, SymbolService} from "../services";
 import {
     Account,
-    CosignatureTransaction,
-    MetadataType,
+    CosignatureSignedTransaction, InnerTransaction,
+    MetadataType, MosaicId,
     PublicAccount,
     SignedTransaction,
     UInt64
@@ -19,18 +19,15 @@ describe("AggregateUndeadTransaction", () => {
     let symbolService: SymbolService;
     let targetAccount: Account;
     let undeadTx: AggregateUndeadTransaction;
+    let mosaicId: MosaicId;
 
     beforeAll(async () => {
         symbolService = SymbolTest.init();
         necromancyService = new NecromancyService(symbolService);
 
-        const { networkType } = await symbolService.getNetwork();
-        targetAccount = Account.generateNewAccount(networkType);
-        console.log(
-            `targetAccount.address=${targetAccount.address.plain()}\n` +
-            `  .publicKey=${targetAccount.publicKey}\n` +
-            `  .privateKey=${targetAccount.privateKey}\n`
-        );
+        const assets = await SymbolTest.generateAssets();
+        targetAccount = assets.account;
+        mosaicId = assets.mosaicId;
     }, 600000);
 
     const createTransactions = async (key: string, value: string = "test", message: string = "test") => {
@@ -53,10 +50,9 @@ describe("AggregateUndeadTransaction", () => {
         ];
     };
 
-    const announceSignedTxWithCosigners = async (signedTx: SignedTransaction, cosigners: Account[]) => {
+    const announceSignedTxWithCosignatures = async (signedTx: SignedTransaction, cosignatures: CosignatureSignedTransaction[]) => {
         const { networkType } = await symbolService.getNetwork();
         const signerPubAccount = PublicAccount.createFromPublicKey(signedTx.signerPublicKey, networkType);
-        const cosignatures = cosigners.map((cosigner) => CosignatureTransaction.signTransactionHash(cosigner, signedTx.hash));
         await symbolService.announceTxWithCosignatures(signedTx, cosignatures);
         return (await symbolService.waitTxsFor(signerPubAccount, signedTx.hash, "confirmed")).shift();
     };
@@ -83,15 +79,15 @@ describe("AggregateUndeadTransaction", () => {
     }, 600000);
 
     it("Pick and cast", async () => {
-        const { signedTx, signature } = await necromancyService.pickAndCastTx(undeadTx);
+        const castedTx = await necromancyService.pickAndCastTx(undeadTx);
 
-        expect(signedTx).toBeDefined();
-        expect(signature).toBeDefined();
+        expect(castedTx).toBeDefined();
         // Expect picking 1st signature.
-        expect(signature).toStrictEqual(undeadTx.signatures[0]);
+        expect(castedTx?.signature).toStrictEqual(undeadTx.signatures[0]);
+        expect(castedTx?.cosignatures.length).toBe(1);
 
-        assert(signedTx);
-        const result = await announceSignedTxWithCosigners(signedTx, []);
+        assert(castedTx);
+        const result = await announceSignedTxWithCosignatures(castedTx.signedTx, castedTx.cosignatures);
 
         expect(result?.error).toBeUndefined();
     }, 600000);
@@ -110,15 +106,14 @@ describe("AggregateUndeadTransaction", () => {
             4.5 * 60 * 60
         );
 
-        const { signedTx, signature } = await necromancyService.pickAndCastTx(undeadTx, [ targetAccount ]);
+        const castedTx = await necromancyService.pickAndCastTx(undeadTx, [ targetAccount ]);
 
-        expect(signedTx).toBeDefined();
-        expect(signature).toBeDefined();
+        expect(castedTx).toBeDefined();
         // Expect picking 2nd signature.
-        expect(signature).toStrictEqual(undeadTx.signatures[1]);
+        expect(castedTx?.signature).toStrictEqual(undeadTx.signatures[1]);
 
-        assert(signedTx);
-        const result = await announceSignedTxWithCosigners(signedTx, []);
+        assert(castedTx);
+        const result = await announceSignedTxWithCosignatures(castedTx.signedTx, castedTx.cosignatures);
 
         expect(result?.error).toBeUndefined();
     }, 600000);
@@ -127,19 +122,18 @@ describe("AggregateUndeadTransaction", () => {
         undeadTx = necromancyService.cosignTx(undeadTx, [ targetAccount ]);
 
         // Backward 1 hour
-        const { signedTx, signature } = await necromancyService.pickAndCastTx(
+        const castedTx = await necromancyService.pickAndCastTx(
             undeadTx,
             [],
             60 * 60
         );
 
-        expect(signedTx).toBeDefined();
-        expect(signature).toBeDefined();
+        expect(castedTx).toBeDefined();
         // Expect picking 1st signature.
-        expect(signature).toStrictEqual(undeadTx.signatures[0]);
+        expect(castedTx?.signature).toStrictEqual(undeadTx.signatures[0]);
 
-        assert(signedTx && signature);
-        const result = await announceSignedTxWithCosigners(signedTx, []);
+        assert(castedTx);
+        const result = await announceSignedTxWithCosignatures(castedTx.signedTx, castedTx.cosignatures);
 
         // This must be failed.
         expect(result?.error).toBeDefined();
@@ -157,14 +151,14 @@ describe("AggregateUndeadTransaction", () => {
         );
 
         // Forward 10 hours
-        const { signedTx, signature } = await necromancyService.pickAndCastTx(undeadTx, [],-10 * 60 * 60);
+        const castedTx = await necromancyService.pickAndCastTx(undeadTx, [ targetAccount ],-10 * 60 * 60);
 
-        expect(signedTx).toBeDefined();
+        expect(castedTx).toBeDefined();
         // Expect picking 3rd signature
-        expect(signature).toStrictEqual(undeadTx.signatures[2]);
+        expect(castedTx?.signature).toStrictEqual(undeadTx.signatures[2]);
 
-        assert(signedTx);
-        const result = await announceSignedTxWithCosigners(signedTx, [ targetAccount ]);
+        assert(castedTx);
+        const result = await announceSignedTxWithCosignatures(castedTx.signedTx, castedTx.cosignatures);
 
         // This must be failed.
         expect(result?.error).toBeDefined();
@@ -184,17 +178,86 @@ describe("AggregateUndeadTransaction", () => {
             4 * 24 * 60 * 60 + 1
         );
 
-        const { signedTx, signature } = await necromancyService.pickAndCastTx(undeadTx, [ targetAccount ]);
+        const castedTx = await necromancyService.pickAndCastTx(undeadTx, [ targetAccount ]);
 
-        expect(signedTx).toBeDefined();
-        expect(signature).toBeDefined();
+        expect(castedTx).toBeDefined();
         // Expect picking 1st signature.
-        expect(signature).toStrictEqual(undeadTx.signatures[undeadTx.signatures.length - 1]);
+        expect(castedTx?.signature).toStrictEqual(undeadTx.signatures[undeadTx.signatures.length - 1]);
 
-        assert(signedTx);
-        const result = await announceSignedTxWithCosigners(signedTx, []);
+        assert(castedTx);
+        const result = await announceSignedTxWithCosignatures(castedTx.signedTx, castedTx.cosignatures);
 
         // This must be failed.
         expect(result?.error).toBeDefined();
+    }, 600000);
+
+    const createManyTransactions = async (key: string, value: string) => {
+        const { signerAccount } = await SymbolTest.getNamedAccounts();
+        return symbolService.createMetadataTx(
+            MetadataType.Account,
+            signerAccount.publicAccount,
+            targetAccount.publicAccount,
+            undefined,
+            key,
+            value,
+        );
+    };
+
+    it("Multiple batches", async () => {
+        const { signerAccount: senderAccount } = await SymbolTest.getNamedAccounts();
+        const txs = new Array<InnerTransaction>();
+
+        for (let i = 0; i < 200; i++) {
+            txs.push(await createManyTransactions(`test${100 + i}key`, `test${100 + i}value`));
+        }
+
+        const batches = await necromancyService.buildTxBatches(
+            4 * 24,
+            txs,
+            senderAccount,
+            [ targetAccount ],
+            0.1,
+            undefined,
+            undefined,
+            4.5 * 60 * 60,
+        );
+
+        const totalSignatures = batches.reduce((acc, curr) => acc + curr.signatures.length, 0);
+
+        expect(batches.length).toBe(3);
+        expect(totalSignatures).toBe(Math.ceil(4 * 24 / 5) * 3);
+
+        const results = await necromancyService.executeBatches(batches, senderAccount);
+
+        expect(results?.filter((result) => result.error).shift()).toBeUndefined();
+    }, 600000);
+
+    it("Expired multiple batches", async () => {
+        const { signerAccount: senderAccount } = await SymbolTest.getNamedAccounts();
+        const txs = new Array<InnerTransaction>();
+
+        for (let i = 0; i < 200; i++) {
+            txs.push(await createManyTransactions(`test${100 + i}key`, `test${100 + i}value`));
+        }
+
+        const batches = await necromancyService.buildTxBatches(
+            4 * 24,
+            txs,
+            senderAccount,
+            [ targetAccount ],
+            0.1,
+            undefined,
+            undefined,
+            4 * 24 * 60 * 60 + 1,
+        );
+
+        const totalSignatures = batches.reduce((acc, curr) => acc + curr.signatures.length, 0);
+
+        expect(batches.length).toBe(3);
+        expect(totalSignatures).toBe(Math.ceil(4 * 24 / 5) * 3);
+
+        const results = await necromancyService.executeBatches(batches, senderAccount);
+
+        expect(results?.filter((result) => result.error).shift()).toBeDefined();
     }, 600000);
 })

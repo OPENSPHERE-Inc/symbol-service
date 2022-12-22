@@ -51,9 +51,10 @@ const necromancyService = new NecromancyService(symbolService, config);
 **引数**
 
 - `symbolService: SymbolService` - SymbolService インスタンス
-- `config: NecromancyServiceConfig`
-  - `deadlineUnitHours: number` - Deadline を時分割する際の単位あたりの時間
-  - `deadlineMarginHours: number` - Pick する際に持たせる余裕時間（deadlineUnitHours + deadlineMarginHours がネットワークの制限を超えない事）
+- `config: NecromancyServiceConfig` - 任意指定
+  - `deadlineUnitHours: number` - **(Optional)** Deadline を時分割する際の単位あたりの時間 (default:5)
+  - `deadlineMarginHours: number` - **(Optional)** Pick する際に持たせる余裕時間。
+    deadlineUnitHours + deadlineMarginHours がネットワークの制限を超えない事 (default:1)
 
 ## 3. Logger ネームスペース
 

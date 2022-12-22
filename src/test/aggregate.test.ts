@@ -41,8 +41,8 @@ describe("Aggregate Transaction", () => {
             ));
         }
 
-        const result = await SymbolTest.doAggregateTxBatches(txs, senderAccount, []);
+        const results = await SymbolTest.doAggregateTxBatches(txs, senderAccount, []);
 
-        expect(result?.filter((result) => result.error).shift()).toBeUndefined();
+        expect(results?.filter((result) => result.error).shift()).toBeUndefined();
     }, 6000000);
 });

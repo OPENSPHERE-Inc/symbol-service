@@ -1,7 +1,6 @@
 import {
     Account,
     AggregateTransaction,
-    AggregateTransactionCosignature,
     Convert,
     CosignatureSignedTransaction, CosignatureTransaction,
     Deadline,
@@ -11,7 +10,7 @@ import {
     UInt64
 } from "symbol-sdk";
 
-import {SymbolService} from "./symbol";
+import {SignedAggregateTx, SymbolService} from "./symbol";
 import assert from "assert";
 import { v4 as uuidv4 } from "uuid";
 
@@ -22,6 +21,10 @@ export interface UndeadSignature {
     signature: string;
     maxFee: UInt64;
     cosignatures: CosignatureSignedTransaction[];
+}
+
+export interface SignedUndeadAggregateTx extends SignedAggregateTx {
+    signature: UndeadSignature;
 }
 
 export class AggregateUndeadTransaction {
@@ -94,7 +97,7 @@ export class NecromancyService {
         signerAccount: Account,
         cosignerAccounts: Account[] = [],
         feeRatio?: number,
-        requiredCosigners: number = 1,
+        requiredCosignatures: number = 1,
         nonce: UInt64 = SymbolService.generateKey(uuidv4()),
         timeShiftSecs: number = 0,
     ): Promise<AggregateUndeadTransaction> {
@@ -131,7 +134,7 @@ export class NecromancyService {
                 [ ...innerTxs, lockMetadata ],
                 networkType,
                 [],
-            ).setMaxFeeForAggregate(await this.symbolService.getFeeMultiplier(feeRatio), requiredCosigners);
+            ).setMaxFeeForAggregate(await this.symbolService.getFeeMultiplier(feeRatio), requiredCosignatures);
 
             const { signature, hash } = await this.symbolService.signTx(signerAccount, aggregateTx);
             const cosignatures = cosignerAccounts.map(
@@ -191,17 +194,17 @@ export class NecromancyService {
         undeadTx: AggregateUndeadTransaction,
         cosignerAccounts: Account[] = [],
         timeShiftSecs: number = 0,
-    ) {
+    ): Promise<SignedUndeadAggregateTx | undefined> {
         const { epochAdjustment } = await this.symbolService.getNetwork();
         const deadline = Deadline.create(epochAdjustment + timeShiftSecs, this.config.deadlineUnitHours);
-        let recalledSignature: UndeadSignature | undefined;
+        let pickedSignature: UndeadSignature | undefined;
         const marginMsecs = this.config.deadlineMarginHours * 60 * 60 * 1000;
 
         for (const signature of undeadTx.signatures) {
             if (signature.adjustedDeadline - marginMsecs > deadline.adjustedValue) {
                 break;
             }
-            recalledSignature = signature;
+            pickedSignature = signature;
         }
 
         // Convert AggregateTransaction with cosignatures to SignedTransaction
@@ -210,31 +213,81 @@ export class NecromancyService {
                 (cosigner) => CosignatureTransaction.signTransactionHash(cosigner, undeadSignature.hash)
             );
 
-            const aggregateTxCosignatures = [ ...undeadSignature.cosignatures, ...cosignatures ].map(
-                (cosignature) =>
-                    new AggregateTransactionCosignature(
-                        cosignature.signature,
-                        PublicAccount.createFromPublicKey(cosignature.signerPublicKey, aggregateTx.networkType)
-                    )
-            );
-
-            return await this.symbolService.convertToSignedTx(new AggregateTransaction(
-                aggregateTx.networkType,
-                aggregateTx.type,
-                aggregateTx.version,
-                Deadline.createFromAdjustedValue(undeadSignature.adjustedDeadline),
-                undeadSignature.maxFee,
-                aggregateTx.innerTransactions,
-                aggregateTxCosignatures,
-                undeadSignature.signature,
-                PublicAccount.createFromPublicKey(undeadTx.publicKey, aggregateTx.networkType),
-            ));
+            return {
+                signedTx: await this.symbolService.convertToSignedTx(new AggregateTransaction(
+                    aggregateTx.networkType,
+                    aggregateTx.type,
+                    aggregateTx.version,
+                    Deadline.createFromAdjustedValue(undeadSignature.adjustedDeadline),
+                    undeadSignature.maxFee,
+                    aggregateTx.innerTransactions,
+                    [],
+                    undeadSignature.signature,
+                    PublicAccount.createFromPublicKey(undeadTx.publicKey, aggregateTx.networkType),
+                )),
+                cosignatures: [ ...undeadSignature.cosignatures, ...cosignatures ],
+            };
         };
 
-        return recalledSignature ? {
-            signature: recalledSignature,
-            signedTx: await toSignedTx(undeadTx.aggregateTx, recalledSignature),
-        } : {};
+        return pickedSignature && {
+            signature: pickedSignature,
+            maxFee: pickedSignature.maxFee,
+            ...(await toSignedTx(undeadTx.aggregateTx, pickedSignature)),
+        };
     }
 
+    public async buildTxBatches(
+        deadlineHours: number,
+        txs: InnerTransaction[],
+        signerAccount: Account,
+        cosignerAccounts: Account[] = [],
+        feeRatio: number = this.symbolService.config.fee_ratio,
+        batchSize: number = this.symbolService.config.batch_size - 1,
+        requiredCosignatures: number = 1,
+        timeShiftSecs: number = 0,
+    ): Promise<AggregateUndeadTransaction[]> {
+        if (batchSize > 99) {
+            throw new Error("Batch size must be 99 or less.");
+        }
+
+        const txPool = [ ...txs ];
+        const batches = new Array<AggregateUndeadTransaction>();
+
+        do {
+            const innerTxs = txPool.splice(0, batchSize);
+            batches.push(await this.createTx(
+                deadlineHours,
+                innerTxs,
+                signerAccount,
+                cosignerAccounts,
+                feeRatio,
+                requiredCosignatures,
+                undefined,
+                timeShiftSecs,
+            ));
+        } while (txPool.length);
+
+        return batches;
+    }
+
+    public async executeBatches(
+        undeadBatches: AggregateUndeadTransaction[],
+        signerAccount: Account | PublicAccount,
+        maxParallel: number = this.symbolService.config.max_parallels,
+    ) {
+        const batches = (await Promise.all(
+            undeadBatches.map((undeadBatch) => this.pickAndCastTx(undeadBatch))))
+            .map((batch) => {
+                if (!batch) {
+                    throw new Error("Couldn't cast signed transaction.");
+                }
+                return batch;
+            });
+
+        return this.symbolService.executeBatches(
+            batches,
+            signerAccount,
+            maxParallel,
+        );
+    }
 }
