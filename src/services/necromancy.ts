@@ -81,15 +81,17 @@ export interface NecromancyServiceConfig {
 
 export class NecromancyService {
 
-    private static defaultConfig = {
+    public readonly config: NecromancyServiceConfig  = {
         deadlineUnitHours: 5,
         deadlineMarginHours: 1,
     };
 
     public constructor(
         private symbolService: SymbolService,
-        private config: NecromancyServiceConfig = NecromancyService.defaultConfig
-    ) {}
+        readonly cfg: Partial<NecromancyServiceConfig>,
+    ) {
+        this.config = { ...this.config, ...cfg };
+    }
 
     // cosigners are optional.
     public async createTx(

@@ -1,6 +1,6 @@
 {
   "name": "@opensphere-inc/symbol-service",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "Symbol Service Library",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
