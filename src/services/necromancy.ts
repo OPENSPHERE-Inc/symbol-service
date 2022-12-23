@@ -16,10 +16,9 @@ import { v4 as uuidv4 } from "uuid";
 
 
 export interface UndeadSignature {
-    adjustedDeadline: number;
+    deadline: number;
     hash: string;
     signature: string;
-    maxFee: UInt64;
     cosignatures: CosignatureSignedTransaction[];
 }
 
@@ -28,6 +27,8 @@ export interface SignedUndeadAggregateTx extends SignedAggregateTx {
 }
 
 export class AggregateUndeadTransaction {
+    private static VERSION = "1.0";
+
     constructor(
         public readonly publicKey: string,
         public readonly aggregateTx: AggregateTransaction,
@@ -36,12 +37,11 @@ export class AggregateUndeadTransaction {
 
     public toJSON() {
         return {
+            version: AggregateUndeadTransaction.VERSION,
             publicKey: this.publicKey,
             aggregateTxPayload: this.aggregateTx.serialize(),
             signatures: this.signatures.map((signature) => ({
                 ...signature,
-                // [ lower, higher ]
-                maxFee: signature.maxFee.toDTO(),
                 cosignatures: signature.cosignatures.map((cosignature) => ({
                     ...cosignature,
                     // [ lower, higher ]
@@ -52,13 +52,14 @@ export class AggregateUndeadTransaction {
     }
 
     public static createFromJSON(json: any) {
+        if (json.version !== AggregateUndeadTransaction.VERSION) {
+            throw new Error(`Version mismatched: ${json.version}`);
+        }
         return new AggregateUndeadTransaction(
             json.publicKey,
             AggregateTransaction.createFromPayload(json.aggregateTxPayload),
             json.signatures.map((signature: any) => ({
                 ...signature,
-                // [ lower, higher ]
-                maxFee: new UInt64(signature.maxFee),
                 cosignatures: signature.cosignatures.map(
                     (cosignature: any) => new CosignatureSignedTransaction(
                         cosignature.parentHash,
@@ -142,9 +143,8 @@ export class NecromancyService {
             );
 
             signatures.push({
-                adjustedDeadline: deadline.adjustedValue,
+                deadline: deadline.adjustedValue,
                 hash,
-                maxFee: aggregateTx.maxFee,
                 signature: Convert.uint8ToHex(signature),
                 cosignatures,
             });
@@ -201,7 +201,7 @@ export class NecromancyService {
         const marginMsecs = this.config.deadlineMarginHours * 60 * 60 * 1000;
 
         for (const signature of undeadTx.signatures) {
-            if (signature.adjustedDeadline - marginMsecs > deadline.adjustedValue) {
+            if (signature.deadline - marginMsecs > deadline.adjustedValue) {
                 break;
             }
             pickedSignature = signature;
@@ -218,8 +218,8 @@ export class NecromancyService {
                     aggregateTx.networkType,
                     aggregateTx.type,
                     aggregateTx.version,
-                    Deadline.createFromAdjustedValue(undeadSignature.adjustedDeadline),
-                    undeadSignature.maxFee,
+                    Deadline.createFromAdjustedValue(undeadSignature.deadline),
+                    aggregateTx.maxFee,
                     aggregateTx.innerTransactions,
                     [],
                     undeadSignature.signature,
@@ -231,7 +231,7 @@ export class NecromancyService {
 
         return pickedSignature && {
             signature: pickedSignature,
-            maxFee: pickedSignature.maxFee,
+            maxFee: undeadTx.aggregateTx.maxFee,
             ...(await toSignedTx(undeadTx.aggregateTx, pickedSignature)),
         };
     }
@@ -270,24 +270,19 @@ export class NecromancyService {
         return batches;
     }
 
-    public async executeBatches(
+    public async pickAndCastTxBatches(
         undeadBatches: AggregateUndeadTransaction[],
-        signerAccount: Account | PublicAccount,
-        maxParallel: number = this.symbolService.config.max_parallels,
+        cosignerAccounts: Account[] = [],
+        timeShiftSecs: number = 0,
     ) {
-        const batches = (await Promise.all(
-            undeadBatches.map((undeadBatch) => this.pickAndCastTx(undeadBatch))))
-            .map((batch) => {
-                if (!batch) {
-                    throw new Error("Couldn't cast signed transaction.");
-                }
-                return batch;
-            });
-
-        return this.symbolService.executeBatches(
-            batches,
-            signerAccount,
-            maxParallel,
-        );
+        return (await Promise.all(
+            undeadBatches.map((undeadBatch) =>
+                this.pickAndCastTx(undeadBatch, cosignerAccounts, timeShiftSecs)))
+        ).map((batch) => {
+            if (!batch) {
+                throw new Error("Couldn't cast signed transaction.");
+            }
+            return batch;
+        });
     }
 }

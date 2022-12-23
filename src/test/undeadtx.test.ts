@@ -227,7 +227,10 @@ describe("AggregateUndeadTransaction", () => {
         expect(batches.length).toBe(3);
         expect(totalSignatures).toBe(Math.ceil(4 * 24 / 5) * 3);
 
-        const results = await necromancyService.executeBatches(batches, senderAccount);
+        const results = await symbolService.executeBatches(
+            await necromancyService.pickAndCastTxBatches(batches),
+            senderAccount
+        );
 
         expect(results?.filter((result) => result.error).shift()).toBeUndefined();
     }, 600000);
@@ -256,7 +259,10 @@ describe("AggregateUndeadTransaction", () => {
         expect(batches.length).toBe(3);
         expect(totalSignatures).toBe(Math.ceil(4 * 24 / 5) * 3);
 
-        const results = await necromancyService.executeBatches(batches, senderAccount);
+        const results = await symbolService.executeBatches(
+            await necromancyService.pickAndCastTxBatches(batches),
+            senderAccount
+        );
 
         expect(results?.filter((result) => result.error).shift()).toBeDefined();
     }, 600000);
