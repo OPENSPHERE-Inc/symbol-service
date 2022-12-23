@@ -27,12 +27,13 @@ export interface SignedUndeadAggregateTx extends SignedAggregateTx {
 }
 
 export class AggregateUndeadTransaction {
-    private static VERSION = "1.0";
+    private static VERSION = "1.1";
 
     constructor(
         public readonly publicKey: string,
         public readonly aggregateTx: AggregateTransaction,
-        public readonly signatures: UndeadSignature[]
+        public readonly signatures: UndeadSignature[],
+        public readonly nonce: UInt64,
     ) {}
 
     public toJSON() {
@@ -48,6 +49,7 @@ export class AggregateUndeadTransaction {
                     version: cosignature.version.toDTO(),
                 }))
             })),
+            nonce: this.nonce.toDTO(),
         }
     }
 
@@ -70,6 +72,7 @@ export class AggregateUndeadTransaction {
                     )
                 )
             })),
+            new UInt64(json.nonce),
         );
     }
 }
@@ -163,6 +166,7 @@ export class NecromancyService {
             // Clear inner transaction's deadline (because it's garbage)
             AggregateTransaction.createFromPayload(firstAggregateTx.serialize()),
             signatures,
+            nonce,
         );
     }
 
@@ -188,6 +192,7 @@ export class NecromancyService {
             undeadTx.publicKey,
             undeadTx.aggregateTx,
             signatures,
+            undeadTx.nonce,
         );
     }
 
