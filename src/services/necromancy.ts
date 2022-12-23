@@ -88,7 +88,7 @@ export class NecromancyService {
 
     public constructor(
         private symbolService: SymbolService,
-        readonly cfg: Partial<NecromancyServiceConfig>,
+        cfg?: Partial<NecromancyServiceConfig>,
     ) {
         this.config = { ...this.config, ...cfg };
     }
