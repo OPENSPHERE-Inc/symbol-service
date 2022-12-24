@@ -170,6 +170,43 @@ export class NecromancyService {
         );
     }
 
+    public async retrieveTx(
+        innerTxs: InnerTransaction[],
+        signerPubAccount: PublicAccount,
+        signatures: UndeadSignature[],
+        maxFee: UInt64,
+        nonce: UInt64,
+    ) {
+        const { networkType } = await this.symbolService.getNetwork();
+
+        // Insert lock metadata
+        const lockMetadataTx = await this.symbolService.createMetadataTx(
+            MetadataType.Account,
+            signerPubAccount,
+            signerPubAccount,
+            undefined,
+            nonce,
+            "1",
+        );
+
+        return new AggregateUndeadTransaction(
+            signerPubAccount.publicKey,
+            // Rebuild reference aggregate tx
+            // Clear inner transaction's deadline (because it's garbage)
+            AggregateTransaction.createFromPayload(
+                AggregateTransaction.createComplete(
+                    Deadline.createFromAdjustedValue(signatures[0].deadline),
+                    [ ...innerTxs, lockMetadataTx ],
+                    networkType,
+                    [],
+                    maxFee,
+                ).serialize()
+            ),
+            signatures,
+            nonce,
+        );
+    }
+
     public cosignTx(
         undeadTx: AggregateUndeadTransaction,
         cosignerAccounts: Account[],

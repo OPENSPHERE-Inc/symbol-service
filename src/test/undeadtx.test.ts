@@ -78,6 +78,21 @@ describe("AggregateUndeadTransaction", () => {
         expect(restoredUndeadTx).toStrictEqual(undeadTx);
     }, 600000);
 
+    it("Retrieve TX", async () => {
+        const { signerAccount } = await SymbolTest.getNamedAccounts();
+        const retrievedUndeadTx = await necromancyService.retrieveTx(
+            await createTransactions("test1key"),
+            signerAccount.publicAccount,
+            undeadTx.signatures,
+            undeadTx.aggregateTx.maxFee,
+            undeadTx.nonce,
+        );
+
+        expect(retrievedUndeadTx.toJSON()).toStrictEqual(undeadTx.toJSON());
+
+        undeadTx = retrievedUndeadTx;
+    });
+
     it("Pick and cast", async () => {
         const castedTx = await necromancyService.pickAndCastTx(undeadTx);
 
@@ -266,4 +281,4 @@ describe("AggregateUndeadTransaction", () => {
 
         expect(results?.filter((result) => result.error).shift()).toBeDefined();
     }, 600000);
-})
+});
