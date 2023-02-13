@@ -1,4 +1,7 @@
-.env*
+yarn-error.log
+.idea
+.env
+.*.env
 node_modules
 .yarnignore
 .test.json

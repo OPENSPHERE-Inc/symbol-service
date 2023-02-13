@@ -56,7 +56,36 @@ const necromancyService = new NecromancyService(symbolService, config);
   - `deadlineMarginHours: number` - **(Optional)** Pick する際に持たせる余裕時間。
     deadlineUnitHours + deadlineMarginHours がネットワークの制限を超えない事 (default:1)
 
-## 3. Logger ネームスペース
+## 3. NodeTracker クラス
+
+### コンストラクタ
+
+```typescript
+const options: NodeTrackerServiceOptions = {
+  cachedNodes: [] as NodeStatistics,
+  cacheTimestamp: 12345678,
+  noWebSocketChallenge: false,
+  webSocketTimeout: 60000,
+  maxParallels: 10,
+};
+
+const nodeTracker = new NodeTrackerService(statsServiceURL, networkType, options);
+```
+
+**引数**
+
+- `statsServiceURL: string` -　Symbol Statistics Service の URL。Testnet: `https://testnet.symbol.services/nodes`, Mainnet: `https://symbol.services/nodes`
+- `networkType: NetworkType` - Testnet: `152`, Mainnet: `104`
+- `option: NodeTrackerServiceOptions` - (Optional)
+  - `cachedNodes: NodeStatistics[]` - (Optional) `availableNodes` をローカルキャッシュしていた場合はここで渡す
+  - `cacheTimestamp: number` - (Optional) ローカルキャッシュ作成日時（Unix時間ミリ秒）
+  - `noWebSocketChallenge: boolean` - (Optional) WebSocket 接続のチェックを行わない（その分高速）。デフォルトは `false`
+  - `webSocketTimeout: number` - (Optional) WebSocket 接続のタイムアウト時間をミリ秒で指定。デフォルトは `60` 秒
+  - `maxParallels: number` - (Optional) ヘルスチェックの同時実行数。デフォルトは `10`。
+    値を大きくするとヘルスチェックがスピードアップしますが、やりすぎると接続エラーが頻発する場合があります。
+    試した限りだと `50` 位が限度かもしれません。
+
+## 4. Logger ネームスペース
 
 ### 初期化
 

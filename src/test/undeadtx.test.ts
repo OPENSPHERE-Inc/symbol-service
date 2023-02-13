@@ -1,6 +1,4 @@
-import dotenv from "dotenv";
-dotenv.config({ path: './.env.test' });
-
+import "./env";
 import {AggregateUndeadTransaction, NecromancyService, SymbolService} from "../services";
 import {
     Account,

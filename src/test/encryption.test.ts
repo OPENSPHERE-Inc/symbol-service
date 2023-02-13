@@ -1,6 +1,4 @@
-import dotenv from "dotenv";
-dotenv.config({ path: './.env.test' });
-
+import "./env";
 import {SymbolTest} from "./utils";
 import {SymbolService} from "../services";
 import {Account, Convert} from "symbol-sdk";

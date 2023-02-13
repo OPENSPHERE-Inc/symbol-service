@@ -1,6 +1,4 @@
-import dotenv from "dotenv";
-dotenv.config({ path: './.env.test' });
-
+import "./env";
 import {SymbolTest} from "./utils";
 import {Account, Convert, Mosaic, MosaicId, UInt64} from "symbol-sdk";
 import {sha3_256} from "js-sha3";

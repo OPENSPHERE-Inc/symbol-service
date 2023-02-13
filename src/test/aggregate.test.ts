@@ -1,6 +1,4 @@
-import dotenv from "dotenv";
-dotenv.config({ path: './.env.test' });
-
+import "./env";
 import {SymbolTest} from "./utils";
 import {Account, InnerTransaction, Mosaic, MosaicId, UInt64} from "symbol-sdk";
 import {SymbolService} from "../services";
