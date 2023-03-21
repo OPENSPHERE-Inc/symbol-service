@@ -2568,10 +2568,10 @@ symbol-openapi-typescript-fetch-client@^1.0.3:
   resolved "https://registry.yarnpkg.com/symbol-openapi-typescript-fetch-client/-/symbol-openapi-typescript-fetch-client-1.0.3.tgz#70f140790848d7d27bcb2f18bf67c32f2e00c9ca"
   integrity sha512-Md3/wkYLWTeJ/o99kXajW5dDs7Ok7AWfGRGDThb2bpC53KVxwnMl2ho/KUPT2Y+CeuIB62+Hgp9NtJLvgXYzHw==
 
-symbol-sdk@^2.0.3:
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/symbol-sdk/-/symbol-sdk-2.0.3.tgz#17337157ff8db046cec152b7b11657b1bf417928"
-  integrity sha512-cTy1/E0yQCTMBrzCNCMMSVwgZdY0MTsw5A3vJCOyG9Dne03a/u8djEW5uB1H5c+mSul91FjP74Dey1Ay7uw8MQ==
+symbol-sdk@^2.0.4:
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/symbol-sdk/-/symbol-sdk-2.0.4.tgz#0dd384752567bf32f596463dce334a8aeedc05d7"
+  integrity sha512-Z+54yxIld2WfboCpsIg3sZ4qtytfwA9cdXcADiZ3r7rFuEdAAEI5XT7cOqZhr52TOr5gtmzJOmzaeHeTBkm+gQ==
   dependencies:
     "@js-joda/core" "^3.2.0"
     catbuffer-typescript "^1.0.2"

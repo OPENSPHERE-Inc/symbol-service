@@ -1,6 +1,6 @@
 {
   "name": "@opensphere-inc/symbol-service",
-  "version": "1.2.9",
+  "version": "1.2.10",
   "description": "Symbol Service Library",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -30,7 +30,7 @@
     "long": "^5.2.1",
     "moment": "^2.29.4",
     "rxjs": "^7.6.0",
-    "symbol-sdk": "^2.0.3",
+    "symbol-sdk": "^2.0.4",
     "uuid": "^9.0.0",
     "ws": "^8.12.0"
   },
