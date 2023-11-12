@@ -37,6 +37,9 @@ describe("Metadata", () => {
 
         expect(result?.error).toBeUndefined();
 
+        // Wait for 60secs
+        await SymbolTest.sleep(60000);
+
         metadata = (await symbolService.searchMetadata(
             MetadataType.Account,
             { source: sourceAccount, target: targetAccount, key: metadataKey }
@@ -89,6 +92,9 @@ describe("Metadata", () => {
 
         expect(result?.error).toBeUndefined();
 
+        // Wait for 60secs
+        await SymbolTest.sleep(60000);
+
         metadata = (await symbolService.searchMetadata(
             MetadataType.Account,
             { source: sourceAccount, target: targetAccount, key: metadataKey }
@@ -125,6 +131,9 @@ describe("Metadata", () => {
         const result = await SymbolTest.doAggregateTx([mosaicMetadataTx], creatorAccount, [ targetAccount ]);
 
         expect(result?.error).toBeUndefined();
+
+        // Wait for 60secs
+        await SymbolTest.sleep(60000);
 
         metadata = (await symbolService.searchMetadata(
             MetadataType.Mosaic,
@@ -180,6 +189,9 @@ describe("Metadata", () => {
 
         expect(result?.error).toBeUndefined();
 
+        // Wait for 60secs
+        await SymbolTest.sleep(60000);
+
         metadata = (await symbolService.searchMetadata(
             MetadataType.Mosaic,
             { source: targetAccount, target: creatorAccount, key: metadataKey, targetId: mosaicId }
@@ -216,6 +228,9 @@ describe("Metadata", () => {
         const result = await SymbolTest.doAggregateTx([namespaceMetadataTx], ownerAccount, [ targetAccount ]);
 
         expect(result?.error).toBeUndefined();
+
+        // Wait for 60secs
+        await SymbolTest.sleep(60000);
 
         metadata = (await symbolService.searchMetadata(
             MetadataType.Namespace,
@@ -271,6 +286,9 @@ describe("Metadata", () => {
 
         expect(result?.error).toBeUndefined();
 
+        // Wait for 60secs
+        await SymbolTest.sleep(60000);
+
         metadata = (await symbolService.searchMetadata(
             MetadataType.Namespace,
             { source: targetAccount, target: ownerAccount, key: metadataKey, targetId: namespaceId }
@@ -302,6 +320,9 @@ describe("Metadata", () => {
         const result = await SymbolTest.doAggregateTx([ addTx, removeTx ], sourceAccount, [ targetAccount ]);
 
         expect(result?.error).toBeUndefined();
+
+        // Wait for 60secs
+        await SymbolTest.sleep(60000);
 
         metadata = (await symbolService.searchMetadata(
             MetadataType.Namespace,
