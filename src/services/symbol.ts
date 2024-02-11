@@ -1,3 +1,9 @@
+import assert from "assert";
+import { sha3_256 } from "js-sha3";
+import _ from "lodash";
+import Long from "long";
+import moment from "moment";
+import { firstValueFrom, Subscription } from "rxjs";
 import {
     Account,
     AccountMetadataTransaction,
@@ -11,8 +17,8 @@ import {
     IListener,
     InnerTransaction,
     KeyGenerator,
-    LockHashAlgorithm, Message,
-    Metadata,
+    LockHashAlgorithm,
+    Message,
     MetadataSearchCriteria,
     MetadataType,
     Mosaic,
@@ -27,26 +33,23 @@ import {
     NamespaceMetadataTransaction,
     NamespaceRegistrationTransaction,
     NetworkConfiguration,
-    NetworkType, PlainMessage,
+    NetworkType,
+    PlainMessage,
     PublicAccount,
     RepositoryFactory,
     RepositoryFactoryConfig,
     RepositoryFactoryHttp,
+    SearcherRepository,
     SecretLockTransaction,
     SecretProofTransaction,
     SignedTransaction,
     Transaction,
     TransactionFees,
-    TransactionGroup, TransferTransaction,
+    TransactionGroup,
+    TransferTransaction,
     UInt64
 } from "symbol-sdk";
-import assert from "assert";
-import {firstValueFrom, Subscription} from "rxjs";
-import moment from "moment";
-import {sha3_256} from "js-sha3";
-import {Logger} from "../libs";
-import Long from "long";
-import _ from "lodash";
+import { BinMetadataHttp, Logger } from "../libs";
 
 
 export interface SignedAggregateTx {
@@ -545,8 +548,9 @@ export class SymbolService {
             });
     }
 
-    // Receive all metadata that are matched criteria
-    public async searchMetadata(
+
+    private async _searchMetadata<T>(
+        metadataHttp: SearcherRepository<T, MetadataSearchCriteria>,
         type: MetadataType,
         criteria: {
             target?: Account | PublicAccount | Address,
@@ -556,9 +560,6 @@ export class SymbolService {
         },
         pageSize: number = 100,
     ) {
-        const {repositoryFactory} = await this.getNetwork();
-        const metadataHttp = repositoryFactory.createMetadataRepository();
-
         const searchCriteria: MetadataSearchCriteria = {
             targetAddress: criteria.target && (
                 SymbolService.isAddress(criteria.target) ? criteria.target : criteria.target.address
@@ -576,7 +577,7 @@ export class SymbolService {
 
         let batch;
         let pageNumber = 1;
-        const metadataPool = new Array<Metadata>();
+        const metadataPool = new Array<T>();
         do {
             batch = await firstValueFrom(
                 metadataHttp.search({...searchCriteria, pageNumber: pageNumber++})
@@ -585,6 +586,38 @@ export class SymbolService {
         } while (batch.length === pageSize);
 
         return metadataPool;
+    }
+
+    // Receive all metadata that are matched criteria
+    public async searchMetadata(
+        type: MetadataType,
+        criteria: {
+            target?: Account | PublicAccount | Address,
+            source?: Account | PublicAccount | Address,
+            key?: string | UInt64,
+            targetId?: MosaicId | NamespaceId,
+        },
+        pageSize: number = 100,
+
+    ) {
+        const { repositoryFactory } = await this.getNetwork();
+        const metadataHttp = repositoryFactory.createMetadataRepository();
+        return this._searchMetadata(metadataHttp, type, criteria, pageSize);
+    }
+
+    // Receive all metadata that are matched criteria
+    public async searchBinMetadata(
+        type: MetadataType,
+        criteria: {
+            target?: Account | PublicAccount | Address,
+            source?: Account | PublicAccount | Address,
+            key?: string | UInt64,
+            targetId?: MosaicId | NamespaceId,
+        },
+        pageSize: number = 100,
+    ) {
+        const binMetadataHttp = new BinMetadataHttp(this.config.node_url, this.config.repo_factory_config?.fetchApi);
+        return this._searchMetadata(binMetadataHttp, type, criteria, pageSize);
     }
 
     public async buildAggregateCompleteTxBatches(
@@ -687,6 +720,13 @@ export class SymbolService {
         const {repositoryFactory} = await this.getNetwork();
         const metadataHttp = repositoryFactory.createMetadataRepository();
         return firstValueFrom(metadataHttp.getMetadata(compositeHash));
+    }
+
+    public async getBinMetadataByHash(
+        compositeHash: string,
+    ) {
+        const binMetadataHttp = new BinMetadataHttp(this.config.node_url, this.config.repo_factory_config?.fetchApi);
+        return firstValueFrom(binMetadataHttp.getMetadata(compositeHash));
     }
 
     public async createSecretLockTx(
