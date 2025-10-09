@@ -25,7 +25,7 @@ describe("NodeTrackerService", () => {
         assert(process.env.PAYER_PRIVATE_KEY);
         account1 = Account.createFromPrivateKey(process.env.SIGNER1_PRIVATE_KEY, Number(process.env.NETWORK_TYPE));
         account2 = Account.createFromPrivateKey(process.env.PAYER_PRIVATE_KEY, Number(process.env.NETWORK_TYPE));
-    });
+    }, 600000);
 
     it("Discover nodes", async () => {
         await nodeTracker.discovery();

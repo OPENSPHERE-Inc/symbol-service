@@ -14,7 +14,7 @@ describe("Encryption", () => {
         const { networkType } = await symbolService.getNetwork();
         targetAccount = Account.generateNewAccount(networkType);
         console.log(`target.address=${targetAccount.address.plain()}`);
-    });
+    }, 600000);
 
     it("Encrypt and decrypt", async () => {
         const { signerAccount: senderAccount } = await SymbolTest.getNamedAccounts();

@@ -21,7 +21,7 @@ describe("Metadata", () => {
         const { networkType } = await symbolService.getNetwork();
         targetAccount = Account.generateNewAccount(networkType);
         console.log(`target.address=${targetAccount.address.plain()}`);
-    });
+    }, 600000);
 
     it("Create account metadata", async () => {
         const { signerAccount: sourceAccount } = await SymbolTest.getNamedAccounts();
