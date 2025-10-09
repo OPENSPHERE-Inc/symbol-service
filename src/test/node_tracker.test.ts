@@ -49,7 +49,7 @@ describe("NodeTrackerService", () => {
         await nodeTracker.pingAll();
         subscription.unsubscribe();
 
-        expect(mock).toBeCalled();
+        expect(mock).toHaveBeenCalled();
         expect(nodeTracker.availableNodes.filter((node) => node.latency).shift()).toBeDefined();
 
         const topNode = nodeTracker.availableNodes
