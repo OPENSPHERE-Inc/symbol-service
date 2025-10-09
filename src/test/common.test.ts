@@ -14,7 +14,7 @@ describe("Common", () => {
         const { networkType } = await symbolService.getNetwork();
         targetAccount = Account.generateNewAccount(networkType);
         console.log(`target.address=${targetAccount.address.plain()}`);
-    });
+    }, 600000);
 
     it("isAddress", () => {
         expect(SymbolService.isAddress(targetAccount.address)).toBeTruthy();
